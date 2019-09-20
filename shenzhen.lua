@@ -1,5 +1,5 @@
 -- title:  Shenzhen I/O Solitaire
--- author: GG
+-- author: Gecko05
 -- desc:   Solitaire from Shenzhen I/O
 -- script: lua
 -- input:  mouse
