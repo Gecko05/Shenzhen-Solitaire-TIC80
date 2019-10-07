@@ -3,26 +3,28 @@
 -- desc:   Solitaire from Shenzhen I/O
 -- script: lua
 -- input:  mouse
- -- specials: 31 41 51
-piles = {{31,1,2,3,4},
-        {5,6,7,8,9},
-        {11,12,13,14},
-        {15,16,17,18,19},
-        {21,22,23,24,25},
-        {26,27,28,29},
-        {31,41,51},
-        {51,41,31}}
+-- specials: 31 41 51
+piles = {{31,1,2,3,4,41},
+        {5,6,7,8,9,41,41},
+        {11,12,13,14,51,51},
+        {15,16,17,18,19,51},
+        {21,22,23,24,25,51},
+        {27,28,31},
+		{26,41,41,31},
+		{51,31,31,61}}
 
 endpiles = {{},
-            {},
-            {},
-            {}
-            }
-			
+			         {},
+			         {},
+			         {}
+			        }
+
 tokpiles = {{},
-            {},
-            {}
-            }
+			         {},
+			         {}
+		 	       }
+-- 	black, green, red
+tokens = {0, 0, 0}
 drag = {}
 trans = {}
 hold = false
@@ -35,6 +37,9 @@ ly = 0
 btn_red = 178
 btn_blk = 180
 btn_grn = 182
+just_once = 0
+justtwice = 1
+tok = 0
 -- Draw a blank card
 function drawBlnkCard(x, y)
 	spr(0, x,  y,   2)
@@ -109,7 +114,7 @@ function drawCards(x0,y0)
 		else 
 			for j,num in ipairs(col) do
 			 x = (i * 18) + x0
-				y = (j * 6) + y0
+				y = (j * 6) + y0 + 30
 				drawCard(x,y,num)
 			end
 		end
@@ -119,9 +124,8 @@ function drawCards(x0,y0)
 			drawSpace((i*18)+30, 10)
 		else 
 			for j,num in ipairs(col) do
-			 x = (i * 18) + x0
-				y = (j * 6) + y0
-				drawCard(x,y,num)
+				x = (i * 18) + x0
+				drawCard(x,10,num)
 			end
 		end
 	end
@@ -130,9 +134,8 @@ function drawCards(x0,y0)
 			drawSpace((i*18)+102, 10)
 		else 
 			for j,num in ipairs(col) do
-			 x = (i * 18) + x0
-				y = (j * 6) + y0
-				drawCard(x,y,num)
+				x = (i * 18) + x0
+				drawCard(x,10,num)
 			end
 		end
 	end
@@ -148,12 +151,12 @@ function drawDrag(x,y)
 end
 
 function drawButtons()
-	spr(btn_red,102,10,2)
-	spr(btn_red+1,110,10,2)
-	spr(btn_grn,102,18,2)
-	spr(btn_grn+1,110,18,2)
-	spr(btn_blk,102,26,2)
-	spr(btn_blk+1,110,26,2)
+	spr(btn_grn-(tokens[3]),102,18,2)
+	spr(btn_grn+1-(tokens[3]),110,18,2)
+	spr(btn_red-(tokens[2]),102,10,2)
+	spr(btn_red+1-(tokens[2]),110,10,2)
+	spr(btn_blk-(tokens[1]),102,26,2)
+	spr(btn_blk+1-(tokens[1]),110,26,2)
 end
 
 function SCN(scnline)
@@ -162,7 +165,7 @@ end
 function draw()
 	cls(12)
 	drawButtons()
-	drawCards(30,30)
+	drawCards(30,0)
 	drawDrag(mx-lx,my-ly)
 end
 
@@ -182,12 +185,39 @@ function moveCardToPile(pile0,n,pile1)
 	table.remove(pile0,n)
 end
 
-function moveStackToHand(pile, n)
+function moveStackToHand(pile,n)
 	while pile[n] ~= nil do
 		table.insert(drag,pile[n])
 		table.remove(pile,n)
 	end
 end
+
+function delay(milis)
+	t0 = time()
+	t1 = t0 + milis
+	while time() < t1 do 
+	end
+end 
+
+function animMoveCard(pile0num,n,pile1n)
+	x0 = (pile0num * 18) + 30
+	y0 = 30 + n*6
+	animCard = piles[pile0num][n]
+	table.remove(piles[pile0num], n)
+    x1 = (pile1n * 18 + 30)
+	y1 = 10
+	xd = (x0 - x1)/120
+	yd = (y0 - y1)/120
+	for i=1,120,1 do 
+		draw()
+		drawCard(x0,y0,animCard)
+		delay(5)
+		x0 = x0 + xd
+		y0 = y0 + yd 
+	end 
+	table.insert(tokpiles[pile1n],animCard) 
+end 
+
 ----------------------------------------
 
 function init()
@@ -198,14 +228,13 @@ init()
 
 function TIC()
 	mx,my,md = mouse()
-	local lpiles = piles
 	-- DRAG
 	if hold == false and md then
 		hold = true
 		c = math.floor((mx - 30)/18)
 		-- get index of last card in pile
-		if lpiles[c] ~= nil then 
-			lc = #lpiles[c]
+		if piles[c] ~= nil then 
+			lc = #piles[c]
 		else
 			lc = 300
 		end
@@ -217,14 +246,22 @@ function TIC()
 		else
 			r = math.floor((my - 30)/6)
 		end
-		if isDraggable(c,r) then
+		if my > 10 and my < 34 and tokpiles[c]~=nil then
+			lx = mx - (c*18 + 30)
+			ly = my - (10)
+			table.insert(drag,tokpiles[c][1])
+			table.remove(tokpiles[c],1)
+			tok = 1
+			orig = c
+		elseif isDraggable(c,r) then
 			lx = mx - (c*18 + 30)
 			ly = my - (r*6 + 30)
-			while(lpiles[c][r] ~= nil) 
+			while(piles[c][r] ~= nil) 
 			do 
-				table.insert(drag,lpiles[c][r])
-				table.remove(lpiles[c],r)
+				table.insert(drag,piles[c][r])
+				table.remove(piles[c],r)
 			end
+			tok = 0
 			orig = c
 		end
 	end
@@ -233,17 +270,60 @@ function TIC()
 		if md == false then
 			c = math.floor((mx - 30)/18)
 			r = math.floor((my - 30)/6)
-			if lpiles[c]~=nil then
-				if isOrdered(lpiles[c][#lpiles[c]],drag[1]) then
-					moveHandToPile(lpiles[c])
+			-- Dropping on token piles
+			if my > 10 and my < 34 and #drag == 1 and tokpiles[c]~=nil and isOrdered(tokpiles[c][1],drag[1]) then 
+					moveHandToPile(tokpiles[c])
+			-- Dropping on a pile 
+			elseif piles[c]~=nil then
+				if isOrdered(piles[c][#piles[c]],drag[1]) then
+					moveHandToPile(piles[c])
 				elseif #drag > 0 then
-					moveHandToPile(lpiles[orig])
+					if tok == 1 then
+						moveHandToPile(tokpiles[orig])
+					else
+						moveHandToPile(piles[orig])
+					end
 				end
+			-- Dropping elsewhere
 			elseif #drag > 0 then
-				moveHandToPile(lpiles[orig])
+				if tok == 1 then
+					moveHandToPile(tokpiles[orig])
+				else
+					moveHandToPile(piles[orig])
+				end
 			end
 			hold = false
 		end
 	end
+	-- Check for unblocked tokens
+	valSum = {0,0,0,0}
+	for k,vpile in pairs(piles) do
+		if #vpile > 0 then 
+			compVal = (vpile[#vpile] - 1)/10 - 2
+			if valSum[compVal] ~= nil then
+				valSum[compVal] = valSum[compVal] + 1
+			end 
+		end
+	end
+	for k,vpile in pairs(tokpiles) do
+		if #vpile > 0 then 
+			compVal = (vpile[#vpile] - 1)/10 - 2
+			if valSum[compVal] ~= nil then
+				valSum[compVal] = valSum[compVal] + 1
+			end 
+		end 
+	end
+	for i,v in ipairs(valSum) do
+		if v == 4 then
+			tokens[i] = 16
+		end 
+	end
 	draw()
+		-- DRAW
+	just_once = just_once + 1
+	if just_once > 200 and justtwice == 1 then 
+		animMoveCard(1,1,1)
+		animMoveCard(1,1,2)
+		just_twice = 0
+	end
 end
