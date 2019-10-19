@@ -10,11 +10,10 @@ piles = {{31,1,2,3,4,41},
         {15,16,17,18,19,51},
         {21,22,23,24,25,51},
         {27,28,31},
-		{26,41,41,31},
-		{51,31,31,61}}
+        {26,41,41,31},
+        {51,31,31,61}}
 
-endpiles = {{},
-			        {},
+endpiles = {		{},
 			        {},
 			        {}
 			        }
@@ -22,30 +21,17 @@ endpiles = {{},
 tokpiles = {		{},
 			        {},
 			        {}
-		 	       }
+		 	        }
 -- 	black, green, red
 tokens = {0, 0, 0}
 drag = {}
-trans = {}
-hold = false
-origin = 0
-md = 0 -- mouse
-mx = 0
-my = 0
-lx = 0
-ly = 0
-btn_red = 178
-btn_blk = 180
-btn_grn = 182
-firstAnim = 0
-tok = 0
-justtwice = 1
-justonce = 0
-_move = 0
-params = {0,0,0}
-animData = {}
-animCard = 0
-movingToken = {0,0,0}
+local cursor = {x = 0,y = 0,c = 0,hold = false}
+local origin = {x = 0,y = 0,col = 0,isTok = 0}
+local btn_red = 178
+local btn_blk = 180
+local btn_grn = 182
+
+local animContext = {first = 0,move = 0,params = {0,0,0},data = {},card = 0}
 -- Draw a blank card
 function drawBlnkCard(x, y)
 	spr(0, x,  y,   2)
@@ -123,8 +109,23 @@ function isDraggable(c,r)
 	end
 	return true
 end
--- Paint cards
-function drawCards()
+
+function drawTokenPiles()
+	-- Draw token piles
+	for i,col in ipairs(tokpiles) do
+		if #col == 0 then
+			drawSpace((i*18) + 30, 10)
+		else 
+			for j,num in ipairs(col) do
+				x = (i * 18) + 30
+				drawCard(x,10,num)
+			end
+		end
+	end
+end
+
+function drawNormalPiles()
+	-- Draw normal piles
 	for i,col in ipairs(piles) do
 		if #col == 0 then
 			drawSpace((i*18)+30, 36)
@@ -136,16 +137,10 @@ function drawCards()
 			end
 		end
 	end
-	for i,col in ipairs(tokpiles) do
-		if #col == 0 then
-			drawSpace((i*18) + 30, 10)
-		else 
-			for j,num in ipairs(col) do
-				x = (i * 18) + 30
-				drawCard(x,10,num)
-			end
-		end
-	end
+end
+
+function drawEndPiles()
+	-- Draw end piles
 	for i,col in ipairs(endpiles) do
 		if #col == 0 then
 			drawSpace((i*18) + 102, 10)
@@ -156,6 +151,14 @@ function drawCards()
 			end
 		end
 	end
+end 
+
+-- Draw cards in piles
+function drawCards()
+	drawNormalPiles()
+	drawTokenPiles()
+	drawEndPiles()
+	drawDrag(cursor.x - origin.x,cursor.y - origin.y)
 end
 
 function drawDrag(x,y)
@@ -176,14 +179,10 @@ function drawButtons()
 	spr(btn_red+1-(tokens[3]),110,26,2)
 end
 
-function SCN(scnline)
-end
-
 function draw()
 	cls(12)
 	drawButtons()
 	drawCards()
-	drawDrag(mx-lx,my-ly)
 end
 
 -- Functions to move cards between piles
@@ -231,31 +230,35 @@ function animateCards()
 	--  		 destPileNum,
 	--			 TokPile?,
 	--			 } 
-	if firstAnim == 0 then 
-		animData = getAnimParams(params)
-		animCard = piles[params[1]][params[4]]
+	-- Start of animation
+	local anim = animContext
+	local params = anim.params
+	local data = anim.data
+	if anim.first == 0 then 
+		anim.data = getAnimParams(params)
+		anim.card = piles[params[1]][params[4]]
 		table.remove(piles[params[1]], params[4])
-		firstAnim = firstAnim + 1
-	else 
-		if firstAnim < 5 then 
-			animData[1] = animData[1] -	animData[5]
-			animData[2] = animData[2] - animData[6]
-			drawCard(animData[1],animData[2],animCard) -- draw the anim card
-			firstAnim = firstAnim + 1
+		anim.first = anim.first + 1
+	else -- Animation "cycle"
+		if anim.first < 5 then 
+			data[1] = data[1] -	data[5]
+			data[2] = data[2] - data[6]
+			drawCard(data[1],data[2],data) -- draw the anim card
+			anim.first = anim.first + 1
 		else
 			if params[3] == 1 then 
-				table.insert(tokpiles[params[2]],animCard)
+				table.insert(tokpiles[params[2]],anim.card)
 			elseif params[3] == 2 then
-				table.insert(endpiles[params[2]],animCard)
+				table.insert(endpiles[params[2]],anim.card)
 			end
-			_move = 0
+			anim.move = 0
 		end 
 	end
 end
 
-function update() 
-	-- Check for unblocked tokens
-	valSum = {0,0,0,0}
+function updateButtons()
+	local valSum = {0,0,0,0}
+	-- Check for uncovered tokens in normal piles
 	for k,vpile in pairs(piles) do
 		if #vpile > 0 then 
 			compVal = (vpile[#vpile] - 1)/10 - 2
@@ -264,6 +267,7 @@ function update()
 			end 
 		end
 	end
+	-- Check for uncovered tokens in token piles
 	for k,vpile in pairs(tokpiles) do
 		if #vpile > 0 then 
 			compVal = (vpile[#vpile] - 1)/10 - 2
@@ -272,120 +276,121 @@ function update()
 			end 
 		end 
 	end
+	-- Check the uncovered cards for every token to
+	-- change the token buttons
 	for i,v in ipairs(valSum) do
 		if v == 4 and getEmptyTokPile() ~= nil then
 			tokens[i] = 16
 		end 
 	end
-	mx,my,md = mouse()
+end
+
+function isClicking()
+	return (cursor.hold == false and cursor.c)
+end
+
+function getSelCardPos()
+	selectedCol = math.floor((cursor.x - 30)/18)
+	-- Get index of last card in pile
+	if piles[selectedCol] ~= nil then 
+		lastCard = #piles[selectedCol]
+	else
+		lastCard = nil
+		return nil,nil
+	end
+	-- Get ranges to check if selecting last card
+	maxy = 36 + ((lastCard - 1) * 6) + 23
+	miny = 36 + ((lastCard - 1) * 6)
+	-- check if dragging last card
+	if cursor.y > miny and cursor.y < maxy then
+		selectedCard = lastCard
+	else
+		selectedCard = math.floor((cursor.y - 30)/6)
+	end
+	return selectedCol,selectedCard
+end
+
+function isDraggingTokPiles()
+	return cursor.y > 10 and cursor.y < 34 and tokpiles[col] ~= nil
+end
+
+function update() 
+	-- Check for unblocked tokens
+	updateButtons()
 	-- DRAG / Click
-	if hold == false and md then
-		hold = true
-		c = math.floor((mx - 30)/18)
-		-- get index of last card in pile
-		if piles[c] ~= nil then 
-			lc = #piles[c]
-		else
-			lc = 300
-		end
-		maxy = 36 + ((lc - 1) * 6) + 23
-		miny = 36 + ((lc - 1) * 6)
-		-- check if dragging last card
-		if my > miny and my < maxy then
-			r = lc
-		else
-			r = math.floor((my - 30)/6)
-		end
-		if my > 10 and my < 34 and tokpiles[c]~=nil then
-			lx = mx - (c*18 + 30)
-			ly = my - (10)
-			table.insert(drag,tokpiles[c][1])
-			table.remove(tokpiles[c],1)
-			tok = 1
-			orig = c
-		elseif isDraggable(c,r) then
-			lx = mx - (c*18 + 30)
-			ly = my - (r*6 + 30)
-			while(piles[c][r] ~= nil) 
-			do 
-				table.insert(drag,piles[c][r])
-				table.remove(piles[c],r)
-			end
-			tok = 0
-			orig = c
+	cursor.x,cursor.y,cursor.c = mouse()
+	if isClicking() then
+		cursor.hold = true
+		local col,card = getSelCardPos()
+		-- Check if dragging from token piles
+		if isDraggingTokPiles() then
+			origin.x = cursor.x - (col*18 + 30)
+			origin.y = cursor.y - (10)
+			table.insert(drag,tokpiles[col][1])
+			table.remove(tokpiles[col],1)
+			origin.isTok = 1
+			origin.col = col
+		-- Check if card is draggable
+		elseif isDraggable(col,card) then
+			origin.x = cursor.x - (col*18 + 30)
+			origin.y = cursor.y - (card*6 + 30)
+			moveStackToHand(piles[col],card)
+			origin.isTok = 0
+			origin.col = col
 		end
 		-- check for token buttons
-		if my > 10 and my < 34 and mx > 103 and mx < 117 then
-			btnNum = (my - 10)//8 + 1
+		if cursor.y > 10 and cursor.y < 34 and cursor.x > 103 and cursor.x < 117 then
+			btnNum = (cursor.y - 10)//8 + 1
 			if tokens[btnNum] == 16 then 
 				tokens[btnNum] = 0
 			end
 		end
 	end
-	-- DROP
-	if hold == true then
-		if md == false then
-			c = math.floor((mx - 30)/18)
-			r = math.floor((my - 30)/6)
+	if cursor.hold == true then
+		-- DROP
+		if cursor.c == false then
+			local col = math.floor((cursor.x - 30)/18)
+			--card = math.floor((cursor.y - 30)/6)
 			-- Dropping on token piles
-			if my > 10 and my < 34 and #drag == 1 and tokpiles[c]~=nil and isOrdered(tokpiles[c][1],drag[1]) then 
-					moveHandToPile(tokpiles[c])
+			if cursor.y > 10 and cursor.y < 34 and #drag == 1 and tokpiles[col]~=nil and isOrdered(tokpiles[col][1],drag[1]) then 
+				moveHandToPile(tokpiles[col])
 			-- Dropping on a pile 
-			elseif piles[c]~=nil then
-				if isOrdered(piles[c][#piles[c]],drag[1]) then
-					moveHandToPile(piles[c])
+			elseif piles[col]~=nil then
+				if isOrdered(piles[col][#piles[col]],drag[1]) then
+					moveHandToPile(piles[col])
 				elseif #drag > 0 then
-					if tok == 1 then
-						moveHandToPile(tokpiles[orig])
+					if origin.isTok == 1 then
+						moveHandToPile(tokpiles[origin.col])
 					else
-						moveHandToPile(piles[orig])
+						moveHandToPile(piles[origin.col])
 					end
 				end
 			-- Dropping elsewhere
 			elseif #drag > 0 then
-				if tok == 1 then
-					moveHandToPile(tokpiles[orig])
+				if origin.isTok == 1 then
+					moveHandToPile(tokpiles[origin.col])
 				else
-					moveHandToPile(piles[orig])
+					moveHandToPile(piles[origin.col])
 				end
 			end
-			hold = false
+			cursor.hold = false
 		end
 	end
-
-	--justonce = justonce + 1 
-	if justonce == 100 and justtwice == 1 then 
-		_move = 1
-		params = {1,4,2,5}
-		justtwice = 0
-	end
-end
-
-function checkIfMove() 
-	for i,tok in ipairs(tokens) do 
-		if tok == 1 then
-			movingToken[i] = 1
-		end 
-	end
-	
 end
 ----------------------------------------
 
 function init()
-
+	--music(0,0,23,true)
 end
 
 init()
 
 function TIC()
-	if _move == 0 then 
+	if  animContext.move == 0 then 
 		update()
-	end 
-	--checkIfMove()
-	-- DRAW
-	draw()
-	-- Move a card with animation
-	if _move == 1 then 
+		draw()
+	else
 		animateCards()
-	end 
+		draw()
+	end
 end
