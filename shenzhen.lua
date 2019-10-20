@@ -33,6 +33,7 @@ local tokpiles = {		{},
 		 	        }
 
 local flowerPile = {}
+
 -- 	black, green, red
 local tokenBtns = {0, 0, 0}
 local drag = {}
@@ -109,7 +110,8 @@ function drawFlowerPile()
 	if #flowerPile == 0 then
 		drawFlowerSpace(120, 10)
 	else
-		drawCard(120,10,61)
+		lastCard = flowerPile[#flowerPile]
+		drawCard(120,10,lastCard)
 	end
 end
 
@@ -270,16 +272,15 @@ function isTokenDropAvailable(col)
 end
 
 function isEndDropAvailable(col)
-	col = col - 5
 	if cursor.x < 120 or cursor.x > 192 or cursor.y < 10 
-		or cursor.y > 34 or #drag ~= 1 or endpiles[col] == nil then
+		or cursor.y > 34 or #drag ~= 1 or endpiles[col-5] == nil then
 		return false
 	end
+	col = col - 5
 	local lastCard = endpiles[col][#endpiles[col]]
 	local endIndex = (drag[1] // 10) + 1
-	trace(endIndex)
 	local res = (((lastCard == nil and ((drag[1]%10) == 1))
-			or ((drag[1] - lastCard) == 1))
+			or (lastCard ~= nil and ((drag[1] - lastCard) == 1)))
 			and endIndex == col)
 	return res
 end
@@ -317,8 +318,15 @@ function updateEndPiles()
 	for i,pile in ipairs(piles) do
 		pilenumber = pilenumber + 1
 		lastCard = #pile
-		if pile[lastCard] == 61 then
+		if pile[lastCard] == 61 and #drag == 0 then
 			newAnimation(61,i,1,0,3)
+		elseif getCardNumber(pile[lastCard]) == 1 and #drag == 0 then
+			color = (pile[lastCard] // 10) + 1
+			newAnimation(pile[lastCard],i,color,0,2)
+			if endpiles[1][1] == 1 and endpiles[2][1] == 11 and 
+			endpiles[3][1] == 21 then
+				pileCount = pileCount + 1
+			end
 		elseif getCardNumber(pile[lastCard]) == pileCount then
 			color = (pile[lastCard] // 10) + 1
 			reps[color] = pilenumber
@@ -327,14 +335,19 @@ function updateEndPiles()
 	end
 	if repsNum == 3 then
 		for i=1,3,1 do
-			if reps[i] ~= 0 then
+			if reps[i] ~= 0 and #drag == 0 then
 				newAnimation(pileCount + ((i-1)*10),reps[i],i,0,2)
 			end
 		end
 		pileCount = pileCount + 1
 	end
-	if pileCount > 9 then
-		victory = true
+	-- Check if tokens are complete
+	completeToks = #tokpiles[1] + #tokpiles[2] + #tokpiles[3]
+	if pileCount > 9 and #flowerPile == 1 and completeToks == 9 then
+		if victory == false then 
+			winCount = winCount + 1
+			victory = true
+		end
 	end
 end
 
@@ -404,13 +417,17 @@ end
 ----------------------------- A N I M A T I O N S ----------------------
 
 function getAnimParams(params)
-	local x0 = params.orig*18 + 30 -- pile0n
+	local x0 = params.orig*18 + 30 -- pile from origin
+	if params.token == 0 then
+		local temp = params.orig + 4
+		x0 = temp*18 + 30
+	end
 	local pile = piles[params.orig]
 	lastCard = #pile
 	local y0 = nil	-- last card's position in Y
-	if params.pileType == 0 then
+	if params.pileType == 0 then	-- From normal pile
 		y0 = lastCard*6 + 30 
-	elseif params.pileType == 1 then
+	elseif params.pileType == 1 then -- From Upper pile
 		y0 = lastCard*6 + 10
 	end
 	local x1 = 0
@@ -419,9 +436,16 @@ function getAnimParams(params)
 	elseif params.token == 2 then
 		x1 = params.dest*18 + 120 -- to End piles
 	elseif params.token == 3 then
-		x1 = 120 -- to Flower pile
+		x1 = 120 				 -- to Flower pile
+	elseif params.token == 0 then
+		x1 = params.dest*18 + 30 -- to Normal pile
 	end
 	local y1 = 10
+	if params.token == 0 then 
+		local pileLen = piles[params.dest]
+		local pileLen = #pileLen
+		y1 = 30 + (6*pileLen)
+	end
 	local xd = (x0 - x1) / 10
 	local yd = (y0 - y1) / 10
 	return x0,y0,x1,y1,xd,yd
@@ -473,11 +497,37 @@ function pileTokens(tokenNum)
 end
 ----------------------------------------------------------------------
 
+function getNumSprite(number)
+	local a = (number // 4) * 16
+	local b = number % 4
+	return a + b + 152
+end
+
+function printScore()
+	local c = winCount // 100
+	local d = (winCount // 10) % 10
+	local u = winCount % 10
+	if c > 0 then
+		c = getNumSprite(c)
+		spr(c,29,126,2)
+	end
+	if d > 0 then
+		d = getNumSprite(d)
+		spr(d,33,126,2)
+	end
+	u = getNumSprite(u)
+	spr(u,37,126,2)
+end
+
 function DRAW()
-	cls(12)
-	--map()
+	--cls(12)
+	map()
 	drawButtons()
 	drawCards()
+	spr(214,198,126,2,1,0,0,4,1)
+	spr(230,137,124,2,1,0,0,6,1)
+	spr(249,12,127,2,1,0,0,2,1)
+	printScore()
 end
 
 function ANIMATE()
@@ -494,6 +544,9 @@ function ANIMATE()
 		elseif anim.pileType == 1 then
 			pile = tokpiles[anim.orig]
 		end
+		if anim.token == 0 then
+			pile = flowerPile
+		end
 		lastCard = #pile
 		table.remove(pile, lastCard)
 		anim.state = 1
@@ -509,7 +562,9 @@ function ANIMATE()
 			drawCard(context.x0,context.y0,anim.card)
 			anim.state = anim.state + 1
 		else
-			if anim.token == 1 then 
+			if anim.token == 0 then
+				table.insert(piles[anim.dest],anim.card)
+			elseif anim.token == 1 then 
 				table.insert(tokpiles[anim.dest],anim.card)
 			elseif anim.token == 2 then
 				table.insert(endpiles[anim.dest],anim.card)
@@ -520,6 +575,14 @@ function ANIMATE()
 			table.remove(animationQueue, 1)
 		end
 	end
+end
+
+function isPressingNewGame()
+	if cursor.x > 198 and cursor.x < 246 
+	and cursor.y > 126 and cursor.y < 142 then
+		return true 
+	end
+	return false
 end
 
 function UPDATE() 
@@ -543,6 +606,8 @@ function UPDATE()
 				setButtonState(btnNum, 0)
 				pileTokens(btnNum)
 			end
+		elseif isPressingNewGame() then
+			createNewGame()		
 		end
 	end
 	if cursor.hold == true then
@@ -585,10 +650,10 @@ function INTRO(loadTime)
 	x = 80
 	y = 54
 	spr(156,x,y,-1,1,0,0,2,2)
-	spr(156,x+17,y,-1,1,0,0,2,2)
+	spr(158,x+17,y,-1,1,0,0,2,2)
 	spr(188,x+35,y-1,-1,1,0,0,2,2)
 	spr(190,x+52,y-1,-1,1,0,0,2,2)
-	print("Concept Operating System",69,72,15,false,1,true)
+	print("CONCEPT OPERATING SYSTEM",69,72,15,false,1,true)
 	rect(83,84,60,2,3)
 	local loading = loadTime / 1100
 	rect(83,84,60,2,3)
@@ -596,11 +661,52 @@ function INTRO(loadTime)
 end
 ------------------------------------------------------------------------
 
+function createNewGame()
+	piles = {{},{},{},{},{},{},{},{}}
+	tokpiles = {{},{},{}}
+	endpiles = {{},{},{}}
+	flowerPile = {}
+	victory = false
+	pileCount = 1
+	for i=1,27,1 do
+		local card = math.random(1,29)
+		while hasCardSpawned(card,flowerPile) or card == 10 or card == 20 do
+			card = math.random(1,29)
+		end
+		table.insert(flowerPile,card)
+	end
+	local i = math.random(1,27)
+	table.insert(flowerPile,i,61)
+	for i=1,4,1 do
+		i = math.random(1,27)
+		table.insert(flowerPile,i,31)
+		table.insert(flowerPile,i,41)
+		table.insert(flowerPile,i,51)
+	end
+	local col = 1
+	for i,card in ipairs(flowerPile) do
+		newAnimation(card, 1, col, 1, 0)
+		if col >= 8 then
+			col = 1
+		else
+			col = col + 1
+		end
+	end
+end
+
+function hasCardSpawned(card,deck)
+	for i,c in ipairs(deck) do
+		if c == card then
+			return true
+		end
+	end
+	return false
+end
+
 function init()
 	--music(0,0,0,true)
 	elapsed = time()
-	math.randomseed(os.time())
-	
+	createNewGame()
 end
 
 init()
