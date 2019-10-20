@@ -4,12 +4,12 @@
 -- script: lua
 -- input:  mouse
 -- specials: 31 41 51
-local piles = {{31,1,2,3,4,41},
-        {5,6,7,8,9,41,41},
-        {11,12,13,14,51,51},
-        {15,16,17,18,19,51},
-        {21,22,23,24,25,51},
-        {27,28,31},
+local piles = {{4,3,2,1,41},
+        {9,8,7,6,5,41,41},
+        {14,13,12,11,51,51},
+        {19,18,17,16,15,51},
+        {25,24,23,22,21,51},
+        {29,28,27,31},
         {26,41,31},
         {31,31,61}}
 
@@ -22,6 +22,7 @@ local tokpiles = {		{},
 			        {},
 			        {}
 		 	        }
+
 local flowerPile = {}
 -- 	black, green, red
 local tokenBtns = {0, 0, 0}
@@ -33,52 +34,35 @@ local btn_blk = 180
 local btn_grn = 182
 local animContext = {x0 = 0,y0 = 0,x1 = 0,y1 = 0,xd = 0,yd = 0}
 local animationQueue = {}
+local pileCount = 1
+local victory = false
+local winCount = 0
+local elapsed = 0
+local intro = 0
 
 ------------------------------ D R A W I N G -----------------------------
 
--- Draw a blank card
 function drawBlnkCard(x, y)
-	spr(0, x,  y,   2)
-	spr(1, x+8,y,   2)
-	spr(16,x+0,y+8, 2)
-	spr(17,x+8,y+8, 2)
-	spr(32,x+0,y+16,2)
-	spr(33,x+8,y+16,2)
+	spr(0,x,y,2,1,0,0,2,3)
 end
--- Draw a card
+
 function drawCard(x,y,num)
 	drawBlnkCard(x, y)
 	spr(num + 79,x + 2,y + 2,2)
 	spr(math.floor(num/10)+144,x+4,y+8,2)
 	spr(num+79,x+6,y+13,2,1,0,2)
 end
---Draw blank pile
-function drawSpace(x0,y0)
-	spr(4, x0,  y0,   2)
-	spr(5, x0+8,y0,   2)
-	spr(20,x0+0,y0+8, 2)
-	spr(21,x0+8,y0+8, 2)
-	spr(36,x0+0,y0+16,2)
-	spr(37,x0+8,y0+16,2)
+
+function drawSpace(x,y)
+	spr(4,x,y,2,1,0,0,2,3)
 end
 
---Draw blank flower pile
-function drawFlowerSpace(x0,y0)
-	spr(6, x0,  y0,   2)
-	spr(7, x0+8,y0,   2)
-	spr(22,x0+0,y0+8, 2)
-	spr(23,x0+8,y0+8, 2)
-	spr(38,x0+0,y0+16,2)
-	spr(39,x0+8,y0+16,2)
+function drawFlowerSpace(x,y)
+	spr(6,x,y,2,1,0,0,2,3)
 end
 
 function drawPiledCard(x, y)
-	spr(2, x,  y,   2)
-	spr(3, x+8,y,   2)
-	spr(18,x+0,y+8, 2)
-	spr(19,x+8,y+8, 2)
-	spr(34,x+0,y+16,2)
-	spr(35,x+8,y+16,2)
+	spr(2,x,y,2,1,0,0,2,3)
 end
 
 function drawTokenPiles()
@@ -153,15 +137,20 @@ function drawDrag(x,y)
 end
 
 function drawButtons()
-	spr(btn_blk-(tokenBtns[1]),102,10,2)
-	spr(btn_blk+1-(tokenBtns[1]),110,10,2)
-	spr(btn_grn-(tokenBtns[2]),102,18,2)
-	spr(btn_grn+1-(tokenBtns[2]),110,18,2)
-	spr(btn_red-(tokenBtns[3]),102,26,2)
-	spr(btn_red+1-(tokenBtns[3]),110,26,2)
+	spr(btn_blk-(tokenBtns[1]),102,10,2,1,0,0,2,1)
+	spr(btn_grn-(tokenBtns[2]),102,18,2,1,0,0,2,1)
+	spr(btn_red-(tokenBtns[3]),102,26,2,1,0,0,2,1)
 end
 
 --------------------------- C A R D   P L A C I N G ----------------------
+
+function getCardNumber(card)
+	-- valid card to get number
+	if card ~= nil and card < 30 then
+		return card % 10
+	end
+	return -1
+end
 
 function getEmptyTokPile()
 	local next = next
@@ -288,12 +277,29 @@ function dragStack(col,card)
 	origin.col = col
 end
 
-function checkForFlower()
+function updatePiles()
+	local reps = {0,0,0}
+	local repsNum = 0
+	local pilenumber = 0
 	for i,pile in ipairs(piles) do
+		pilenumber = pilenumber + 1
 		lastCard = #pile
 		if pile[lastCard] == 61 then
 			newAnimation(61,i,1,0,3)
+		elseif getCardNumber(pile[lastCard]) == pileCount then
+			color = (pile[lastCard] // 10) + 1
+			reps[color] = pilenumber
+			repsNum = repsNum + 1
 		end
+	end
+	if repsNum == 3 then
+		for i=1,3,1 do
+			newAnimation(pileCount + ((i-1)*10),reps[i],i,0,2)
+		end
+		pileCount = pileCount + 1
+	end
+	if pileCount > 9 then
+		victory = true
 	end
 end
 
@@ -364,7 +370,7 @@ end
 
 function getAnimParams(params)
 	local x0 = params.orig*18 + 30 -- pile0n
-	pile = piles[params.orig]
+	local pile = piles[params.orig]
 	lastCard = #pile
 	local y0 = nil	-- last card's position in Y
 	if params.pileType == 0 then
@@ -393,7 +399,7 @@ function newAnimation(card, origPile, destPile, pileType, token)
 end
 
 function playDrawSound()
-	sfx(1,'G#1',3,0,10,2)
+	sfx(1,'G-7',3,0,10,2)
 end
 
 function pileTokens(tokenNum)
@@ -434,8 +440,10 @@ function pileTokens(tokenNum)
 	end
 end
 ----------------------------------------------------------------------
+
 function DRAW()
 	cls(12)
+	--map()
 	drawButtons()
 	drawCards()
 end
@@ -485,7 +493,7 @@ end
 function UPDATE() 
 	-- Check for unblocked tokens
 	updateButtons()
-	checkForFlower()
+	updatePiles()
 	-- DRAG / Click
 	cursor.x,cursor.y,cursor.c = mouse()
 	if isClicking() then
@@ -537,20 +545,45 @@ function UPDATE()
 		end
 	end
 end
+
+function INTRO(loadTime)
+	cls(0)
+	x = 80
+	y = 54
+	spr(156,x,y,-1,1,0,0,2,2)
+	spr(156,x+17,y,-1,1,0,0,2,2)
+	spr(188,x+35,y-1,-1,1,0,0,2,2)
+	spr(190,x+52,y-1,-1,1,0,0,2,2)
+	print("Concept Operating System",68,72,15,false,1,true)
+	rect(83,84,60,2,3)
+	local loading = loadTime / 1100
+	rect(83,84,60,2,3)
+	rect(83,84,math.floor(60 * loading),2,15)
+end
 ------------------------------------------------------------------------
 
 function init()
 	--music(0,0,0,true)
+	elapsed = time()
 end
 
 init()
 
 function TIC()
-	if  #animationQueue == 0 then 
-		UPDATE()
-		DRAW()
-	else
-		DRAW()
-		ANIMATE()
+	if intro == 0 then
+		local time1 = time() - elapsed
+		if time1 < 1100 then
+			INTRO(time1)
+		else
+			intro = 1
+		end
+	else	
+		if  #animationQueue == 0 then 
+			UPDATE()
+			DRAW()
+		else
+			DRAW()
+			ANIMATE()
+		end
 	end
 end
