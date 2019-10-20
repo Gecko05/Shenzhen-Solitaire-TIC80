@@ -4,7 +4,16 @@
 -- script: lua
 -- input:  mouse
 -- specials: 31 41 51
-local piles = {{4,3,2,1,41},
+local piles = {{},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}}
+		
+local loadPiles = {{4,3,2,1,41},
         {9,8,7,6,5,41,41},
         {14,13,12,11,51,51},
         {19,18,17,16,15,51},
@@ -204,7 +213,7 @@ function isDraggable(c,r)
 end
 
 function moveHandToPile(pile)
-	while drag[1] ~= nil do
+	while drag[1] ~= nil and pile ~= nil do
 		table.insert(pile,drag[1])
 		table.remove(drag,1)
 	end
@@ -260,6 +269,21 @@ function isTokenDropAvailable(col)
 			and tokpiles[col]~=nil and isOrdered(tokpiles[col][1],drag[1]))
 end
 
+function isEndDropAvailable(col)
+	col = col - 5
+	if cursor.x < 120 or cursor.x > 192 or cursor.y < 10 
+		or cursor.y > 34 or #drag ~= 1 or endpiles[col] == nil then
+		return false
+	end
+	local lastCard = endpiles[col][#endpiles[col]]
+	local endIndex = (drag[1] // 10) + 1
+	trace(endIndex)
+	local res = (((lastCard == nil and ((drag[1]%10) == 1))
+			or ((drag[1] - lastCard) == 1))
+			and endIndex == col)
+	return res
+end
+
 function dragCardFromTokPiles(col)
 	origin.x = cursor.x - (col*18 + 30)
 	origin.y = cursor.y - (10)
@@ -276,11 +300,20 @@ function dragStack(col,card)
 	origin.isTok = 0
 	origin.col = col
 end
-
-function updatePiles()
+-- Update end piles
+function updateEndPiles()
 	local reps = {0,0,0}
 	local repsNum = 0
 	local pilenumber = 0
+	-- Check for cards that are already in endpiles
+	for i,pile in ipairs(endpiles) do
+		for j,card in ipairs(pile) do
+			if card % 10 == pileCount then
+				repsNum = repsNum + 1
+			end
+		end
+	end
+	-- Check for cards that are already in standard piles
 	for i,pile in ipairs(piles) do
 		pilenumber = pilenumber + 1
 		lastCard = #pile
@@ -294,7 +327,9 @@ function updatePiles()
 	end
 	if repsNum == 3 then
 		for i=1,3,1 do
-			newAnimation(pileCount + ((i-1)*10),reps[i],i,0,2)
+			if reps[i] ~= 0 then
+				newAnimation(pileCount + ((i-1)*10),reps[i],i,0,2)
+			end
 		end
 		pileCount = pileCount + 1
 	end
@@ -425,10 +460,7 @@ function pileTokens(tokenNum)
 	-- Get the piles where every token is uncovered
 	for i,pile in ipairs(piles) do
 		local lastCard = #pile
-		if #pile == 0 then
-			break
-		end
-		if pile[lastCard] == tokenCard then 
+		if pile[lastCard] == tokenCard and #pile ~= 0 then 
 			table.insert(cardPositions,i)
 		end
 	end
@@ -493,7 +525,7 @@ end
 function UPDATE() 
 	-- Check for unblocked tokens
 	updateButtons()
-	updatePiles()
+	updateEndPiles()
 	-- DRAG / Click
 	cursor.x,cursor.y,cursor.c = mouse()
 	if isClicking() then
@@ -516,10 +548,12 @@ function UPDATE()
 	if cursor.hold == true then
 		-- DROP
 		if cursor.c == false then
-			local col = math.floor((cursor.x - 30)/18)
+			local col = (cursor.x - 30)//18
 			--card = math.floor((cursor.y - 30)/6)
 			if isTokenDropAvailable(col) then 
 				moveHandToPile(tokpiles[col])
+			elseif isEndDropAvailable(col) then
+				moveHandToPile(endpiles[col - 5])
 			-- Dropping on a pile 
 			elseif piles[col]~=nil then
 				if isOrdered(piles[col][#piles[col]],drag[1]) then
@@ -554,7 +588,7 @@ function INTRO(loadTime)
 	spr(156,x+17,y,-1,1,0,0,2,2)
 	spr(188,x+35,y-1,-1,1,0,0,2,2)
 	spr(190,x+52,y-1,-1,1,0,0,2,2)
-	print("Concept Operating System",68,72,15,false,1,true)
+	print("Concept Operating System",69,72,15,false,1,true)
 	rect(83,84,60,2,3)
 	local loading = loadTime / 1100
 	rect(83,84,60,2,3)
@@ -565,6 +599,8 @@ end
 function init()
 	--music(0,0,0,true)
 	elapsed = time()
+	math.randomseed(os.time())
+	
 end
 
 init()
