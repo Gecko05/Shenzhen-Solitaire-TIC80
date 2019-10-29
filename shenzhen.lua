@@ -49,6 +49,7 @@ local victory = false
 local winCount = 0
 local elapsed = 0
 local intro = 0
+local firstTime = 0
 
 ------------------------------ D R A W I N G -----------------------------
 
@@ -189,6 +190,9 @@ function isOrdered(num0,num1)
 	if num0 == nil then
 		return true
 	end
+	if num1 == 31 or num1 == 41 or num1 == 51 then
+		return false
+	end
 	if isDifColor(num0,num1) then
 		n0 = num0 % 10
 		n1 = num1 % 10
@@ -301,17 +305,30 @@ function dragStack(col,card)
 	origin.isTok = 0
 	origin.col = col
 end
--- Update end piles
+
 function updateEndPiles()
 	local reps = {0,0,0}
 	local repsNum = 0
 	local pilenumber = 0
+	-- Count cards in endpiles to update pileCounter 
+	local minim = 10
+	for i,pile in ipairs(endpiles) do
+		if pile[#pile] ~= nil then 
+			local card = pile[#pile]
+			local val = card % 10
+			if val < minim then
+				minim = val + 1
+			end
+		else
+			minim = 1
+		end
+	end
+	pileCount = minim
+	--trace(pileCount)
 	-- Check for cards that are already in endpiles
 	for i,pile in ipairs(endpiles) do
-		for j,card in ipairs(pile) do
-			if card % 10 == pileCount then
-				repsNum = repsNum + 1
-			end
+		if pile[pileCount] ~= nil and pile[pileCount] % 10 == pileCount then
+			repsNum = repsNum + 1
 		end
 	end
 	-- Check for cards that are already in standard piles
@@ -323,11 +340,7 @@ function updateEndPiles()
 		elseif getCardNumber(pile[lastCard]) == 1 and #drag == 0 then
 			color = (pile[lastCard] // 10) + 1
 			newAnimation(pile[lastCard],i,color,0,2)
-			if endpiles[1][1] == 1 and endpiles[2][1] == 11 and 
-			endpiles[3][1] == 21 then
-				pileCount = pileCount + 1
-			end
-		elseif getCardNumber(pile[lastCard]) == pileCount then
+		elseif getCardNumber(pile[lastCard]) == pileCount and #drag == 0 then
 			color = (pile[lastCard] // 10) + 1
 			reps[color] = pilenumber
 			repsNum = repsNum + 1
@@ -339,7 +352,9 @@ function updateEndPiles()
 				newAnimation(pileCount + ((i-1)*10),reps[i],i,0,2)
 			end
 		end
-		pileCount = pileCount + 1
+		--if repsNum == 3 then 
+		--	pileCount = pileCount + 1
+		--end
 	end
 	-- Check if tokens are complete
 	completeToks = #tokpiles[1] + #tokpiles[2] + #tokpiles[3]
@@ -387,6 +402,9 @@ end
 function updateButtons()
 	local tokReps = {0,0,0,0}
 	-- Check for uncovered tokens in normal piles
+	if drag ~= 0 then
+		return
+	end
 	for i,pile in ipairs(piles) do
 		local frontCard = pile[#pile]
 		if frontCard ~= nil then 
@@ -458,7 +476,7 @@ function newAnimation(card, origPile, destPile, pileType, token)
 end
 
 function playDrawSound()
-	sfx(1,'G-7',3,0,10,2)
+	sfx(1,'G-7',3,0,5,2)
 end
 
 function pileTokens(tokenNum)
@@ -523,11 +541,11 @@ function DRAW()
 	--cls(12)
 	map()
 	drawButtons()
-	drawCards()
 	spr(214,198,126,2,1,0,0,4,1)
 	spr(230,137,124,2,1,0,0,6,1)
 	spr(249,12,127,2,1,0,0,2,1)
 	printScore()
+	drawCards()
 end
 
 function ANIMATE()
@@ -704,7 +722,6 @@ function hasCardSpawned(card,deck)
 end
 
 function init()
-	--music(0,0,0,true)
 	elapsed = time()
 	createNewGame()
 end
@@ -721,6 +738,10 @@ function TIC()
 		end
 	else	
 		if  #animationQueue == 0 then 
+			if firstTime == 0 and intro == 1 then
+				music(0,0,0,true)
+				firstTime = 1
+			end
 			UPDATE()
 			DRAW()
 		else
