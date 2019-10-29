@@ -402,7 +402,7 @@ end
 function updateButtons()
 	local tokReps = {0,0,0,0}
 	-- Check for uncovered tokens in normal piles
-	if drag ~= 0 then
+	if #drag ~= 0 then
 		return
 	end
 	for i,pile in ipairs(piles) do
@@ -597,7 +597,7 @@ end
 
 function isPressingNewGame()
 	if cursor.x > 198 and cursor.x < 246 
-	and cursor.y > 126 and cursor.y < 142 then
+	and cursor.y > 121 and cursor.y < 130 then
 		return true 
 	end
 	return false
