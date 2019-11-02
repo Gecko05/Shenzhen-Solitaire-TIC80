@@ -50,44 +50,50 @@ local winCount = 0
 local elapsed = 0
 local intro = 0
 local firstTime = 0
+local insCount = 0
 
 ------------------------------ D R A W I N G -----------------------------
 
+-- Card dimensions 16 pixels x 32 pixels
 function drawBlnkCard(x, y)
-	spr(0,x,y,2,1,0,0,2,3)
+	spr(256,x,y,2,1,0,0,3,5)
 end
 
 function drawCard(x,y,num)
 	drawBlnkCard(x, y)
 	spr(num + 79,x + 2,y + 2,2)
-	spr(math.floor(num/10)+144,x+4,y+8,2)
-	spr(num+79,x+6,y+13,2,1,0,2)
+	spr(math.floor(num/10)+144,x+6,y+14,2)
+	spr(num+79,x+9,y+25,2,1,0,2)
 end
 
 function drawSpace(x,y)
-	spr(4,x,y,2,1,0,0,2,3)
+	spr(259,x,y,2,1,0,0,3,5)
+end
+
+function drawTokSpace(x,y)
+	spr(265,x,y,2,1,0,0,3,5)
 end
 
 function drawFlowerSpace(x,y)
-	spr(6,x,y,2,1,0,0,2,3)
+	spr(262,x,y,2,1,0,0,3,5)
 end
 
 function drawPiledCard(x, y)
-	spr(2,x,y,2,1,0,0,2,3)
+	spr(336,x,y,2,1,0,0,3,5)
 end
 
 function drawTokenPiles()
 	-- Draw token piles
 	for i,col in ipairs(tokpiles) do
 		if #col <= 0 then
-			drawSpace((i*18) + 30, 10)
+			drawTokSpace((i*24) + 2, 0)
 		elseif #col < 4 then
 			for j,num in ipairs(col) do
-				x = (i * 18) + 30
-				drawCard(x,10,num)
+				x = (i * 24) + 2
+				drawCard(x,0,num)
 			end
 		else
-			drawPiledCard((i*18) + 30, 10)
+			drawPiledCard((i*24) + 2, 0)
 		end
 	end
 end
@@ -96,11 +102,11 @@ function drawNormalPiles()
 	-- Draw normal piles
 	for i,col in ipairs(piles) do
 		if #col == 0 then
-			drawSpace((i*18)+30, 36)
+			drawSpace((i*24 + 2), 38)
 		else 
 			for j,num in ipairs(col) do
-				x = (i * 18) + 30
-				y = (j * 6) + 30
+				x = (i * 24 + 2)
+				y = (j * 7) + 31
 				drawCard(x,y,num)
 			end
 		end
@@ -109,10 +115,10 @@ end
 
 function drawFlowerPile()
 	if #flowerPile == 0 then
-		drawFlowerSpace(120, 10)
+		drawFlowerSpace(117, 0)
 	else
 		lastCard = flowerPile[#flowerPile]
-		drawCard(120,10,lastCard)
+		drawCard(117,0,lastCard)
 	end
 end
 
@@ -120,11 +126,11 @@ function drawEndPiles()
 	-- Draw end piles
 	for i,col in ipairs(endpiles) do
 		if #col == 0 then
-			drawSpace((i*18) + 120, 10)
+			drawTokSpace((i*24) + 122, 0)
 		else 
 			for j,num in ipairs(col) do
-				x = (i * 18) + 120
-				drawCard(x,10,num)
+				x = (i * 24) + 122
+				drawCard(x,0,num)
 			end
 		end
 	end
@@ -132,10 +138,10 @@ end
 
 -- Draw cards in piles
 function drawCards()
-	drawNormalPiles()
 	drawTokenPiles()
 	drawEndPiles()
 	drawFlowerPile()
+	drawNormalPiles()
 	drawDrag(cursor.x - origin.x,cursor.y - origin.y)
 end
 
@@ -143,15 +149,105 @@ function drawDrag(x,y)
 	if #drag > 0 then
 		for i,c in pairs(drag) do
 			drawCard(x,y,c)
-			y = y + 6
+			y = y + 7
 		end
 	end
 end
 
 function drawButtons()
-	spr(btn_blk-(tokenBtns[1]),102,10,2,1,0,0,2,1)
-	spr(btn_grn-(tokenBtns[2]),102,18,2,1,0,0,2,1)
-	spr(btn_red-(tokenBtns[3]),102,26,2,1,0,0,2,1)
+	-- x 98 Y 1?
+	spr(btn_blk-(tokenBtns[1]),95,4,2,1,0,0,2,1)
+	spr(btn_grn-(tokenBtns[2]),95,14,2,1,0,0,2,1)
+	spr(btn_red-(tokenBtns[3]),95,24,2,1,0,0,2,1)
+end
+
+function drawButtonsAt(x,y)
+	spr(btn_blk-(tokenBtns[1]),x,y,2,1,0,0,2,1)
+	spr(btn_grn-(tokenBtns[2]),x,y+10,2,1,0,0,2,1)
+	spr(btn_red-(tokenBtns[3]),x,y+20,2,1,0,0,2,1)
+end
+
+function printScore()
+	local c = winCount // 100
+	local d = (winCount // 10) % 10
+	local u = winCount % 10
+	if c > 0 then
+		c = getNumSprite(c)
+		spr(c,29,126,2)
+	end
+	if d > 0 then
+		d = getNumSprite(d)
+		spr(d,33,126,2)
+	end
+	u = getNumSprite(u)
+	spr(u,37,126,2)
+	spr(214,198,126,2,1,0,0,4,1)
+	spr(230,137,124,2,1,0,0,6,1)
+	spr(249,12,127,2,1,0,0,2,1)
+end
+
+function drawTL()
+	local x = 34
+	drawCard(x,6,29)
+	drawCard(x+21,6,19)
+	drawCard(x+42,6,9)
+	print("TO WIN,STACK THE THREE SUITS\n FROM 1 TO 9 IN THE TOP-RIGHT",
+	14,45,15,false,1,true)
+end
+
+function drawBL()
+	local x = 30
+	drawCard(x,65,51)
+	drawCard(x+21,65,13)
+	drawTokSpace(x+42,65)
+	drawButtonsAt(x+64,68)
+	print("THE FREE CELLS IN THE TOP-LEFT\nCAN STORE ONE CARD OF ANY TYPE",
+	11,104,15,false,1,true)
+end
+
+function drawTR()
+	local exPile = {16,25,4,23}
+	for i,card in ipairs(exPile) do
+		drawCard(130,i*7-6,card)
+	end
+	for i = 1,3,1 do
+		drawSpace(i*22+130,1)
+	end
+	print("         STACK CARDS\nALTERNATING SUITS AND\n    DECREASING VALUES",
+	151,40,15,false,1,true)
+end
+
+function drawBR()
+	local exPile = {51,51,51,51}
+	for i,card in ipairs(exPile) do
+		drawCard(125+i*7,65,card)
+	end
+	drawPiledCard(200,65)
+	print("    FOUR MATCHING DRAGONS\nCAN BE MOVED TO A FREE CELL\n   BY PUSHING THEIR BUTTON",
+	130,102,15,false,1,true)
+end
+
+function drawInstructions()
+	map(30,1)
+	printScore()
+-- Draw each four quadrants
+	drawTL()
+	drawBL()
+	drawTR()
+	drawBR()
+	if insCount <= 9 then
+		insCount = insCount + 1
+	end
+	cursor.x,cursor.y,cursor.c = mouse()
+	if isClicking() then
+		if isPressingInstructions() and intro == 2 and insCount >= 10 then
+			intro = 1
+			insCount = 0
+		end
+		cursor.hold = true 
+	else
+		cursor.hold = false
+	end
 end
 
 --------------------------- C A R D   P L A C I N G ----------------------
@@ -241,11 +337,40 @@ function moveStackToHand(pile,n)
 end
 
 function isClicking()
-	return (cursor.hold == false and cursor.c)
+	return (cursor.hold == false and cursor.c == true)
+end
+
+function getSelCol()
+	local hit = 0
+	local selectedCol = 0
+	-- Check if the x position matches any columns
+	local x = cursor.x - 26
+	for i=1,8,1 do
+		local border = (i - 1) * 24
+		if x > border and x < border + 18 then
+			selectedCol = i
+		end
+	end
+	return selectedCol
 end
 
 function getSelCardPos()
-	selectedCol = math.floor((cursor.x - 30)/18)
+	local hit = 0
+	local selectedCol = 0
+	-- Check if the x position matches any columns
+	local x = cursor.x - 26
+	for i=1,8,1 do
+		local border = (i - 1) * 24
+		if x > border and x < border + 18 then
+			hit = 1
+			selectedCol = i
+		end
+	end
+	if hit ~= 1 then
+		-- no columns selected
+		return nil,nil
+	end
+	
 	-- Get index of last card in pile
 	if piles[selectedCol] ~= nil then 
 		lastCard = #piles[selectedCol]
@@ -254,30 +379,30 @@ function getSelCardPos()
 		return nil,nil
 	end
 	-- Get ranges to check if selecting last card
-	maxy = 36 + ((lastCard - 1) * 6) + 23
-	miny = 36 + ((lastCard - 1) * 6)
+	maxy = 31 + (lastCard * 7) + 35
+	miny = 31 + (lastCard * 7)
 	-- check if dragging last card
 	if cursor.y > miny and cursor.y < maxy then
 		selectedCard = lastCard
 	else
-		selectedCard = math.floor((cursor.y - 30)/6)
+		selectedCard = (cursor.y - 31)//7
 	end
 	return selectedCol,selectedCard
 end
 
 function isDraggingTokPiles(col)
-	return (cursor.y > 10 and cursor.y < 34 
+	return (cursor.y > 2 and cursor.y < 37 
 			and tokpiles[col] ~= nil and #tokpiles[col] == 1)
 end
 
 function isTokenDropAvailable(col)
-	return (cursor.y > 10 and cursor.y < 34 and #drag == 1 
+	return (cursor.y > 2 and cursor.y < 37 and #drag == 1 
 			and tokpiles[col]~=nil and isOrdered(tokpiles[col][1],drag[1]))
 end
 
 function isEndDropAvailable(col)
-	if cursor.x < 120 or cursor.x > 192 or cursor.y < 10 
-		or cursor.y > 34 or #drag ~= 1 or endpiles[col-5] == nil then
+	if cursor.x < 146 or cursor.x > 218 or cursor.y < 2 
+		or cursor.y > 37 or #drag ~= 1 or col == nil or endpiles[col-5] == nil then
 		return false
 	end
 	col = col - 5
@@ -290,8 +415,8 @@ function isEndDropAvailable(col)
 end
 
 function dragCardFromTokPiles(col)
-	origin.x = cursor.x - (col*18 + 30)
-	origin.y = cursor.y - (10)
+	origin.x = cursor.x - (col*24 + 2)
+	origin.y = cursor.y - (2)
 	table.insert(drag,tokpiles[col][1])
 	table.remove(tokpiles[col],1)
 	origin.isTok = 1
@@ -299,8 +424,8 @@ function dragCardFromTokPiles(col)
 end
 
 function dragStack(col,card)
-	origin.x = cursor.x - (col*18 + 30)
-	origin.y = cursor.y - (card*6 + 30)
+	origin.x = cursor.x - (col*24 + 2)
+	origin.y = cursor.y - (card*7 + 31)
 	moveStackToHand(piles[col],card)
 	origin.isTok = 0
 	origin.col = col
@@ -366,10 +491,67 @@ function updateEndPiles()
 	end
 end
 
+function hasCardSpawned(card,deck)
+	for i,c in ipairs(deck) do
+		if c == card then
+			return true
+		end
+	end
+	return false
+end
+
+function createNewGame()
+	piles = {{},{},{},{},{},{},{},{}}
+	tokpiles = {{},{},{}}
+	endpiles = {{},{},{}}
+	flowerPile = {}
+	victory = false
+	pileCount = 1
+	for i=1,27,1 do
+		local card = math.random(1,29)
+		while hasCardSpawned(card,flowerPile) or card == 10 or card == 20 do
+			card = math.random(1,29)
+		end
+		table.insert(flowerPile,card)
+	end
+	local i = math.random(1,27)
+	table.insert(flowerPile,i,61)
+	for i=1,4,1 do
+		i = math.random(1,27)
+		table.insert(flowerPile,i,31)
+		table.insert(flowerPile,i,41)
+		table.insert(flowerPile,i,51)
+	end
+	local col = 1
+	for i,card in ipairs(flowerPile) do
+		newAnimation(card, 1, col, 1, 0)
+		if col >= 8 then
+			col = 1
+		else
+			col = col + 1
+		end
+	end
+end
+
+function getNumSprite(number)
+	local a = (number // 4) * 16
+	local b = number % 4
+	return a + b + 152
+end
+
 -------------------------------- B U T T O N S --------------------------
 
 function isPressingButton()
-	return cursor.y > 10 and cursor.y < 34 and cursor.x > 103 and cursor.x < 117
+	if cursor.x < 95 or cursor.x > 111 then 
+		return false
+	end
+	for i=0,2,1 do
+		local btnStart = i * 10 + 4
+		if cursor.y >= btnStart and cursor.y <= btnStart + 8 then
+			return true
+		end
+	end
+	return false
 end
 
 function isButtonOn(btnNumber)
@@ -382,7 +564,14 @@ function setButtonState(btnNumber, state)
 end
 
 function getButtonNum()
-	return (cursor.y - 10)//8 + 1
+	local num = 0
+	for i=0,2,1 do
+		local btnStart = i * 10 + 4
+		if cursor.y >= btnStart and cursor.y <= btnStart + 8 then
+			num = i + 1
+		end
+	end
+	return num
 end
 
 function getTokenIndex(num)
@@ -432,40 +621,56 @@ function updateButtons()
 	end
 end
 
+function isPressingInstructions()
+	if cursor.x > 140 and cursor.x < 196 
+	and cursor.y > 121 and cursor.y < 130 and cursor.c==true then
+		return true 
+	end
+	return false
+end
+
+function isPressingNewGame()
+	if cursor.x > 198 and cursor.x < 246 
+	and cursor.y > 121 and cursor.y < 130 then
+		return true 
+	end
+	return false
+end
+
 ----------------------------- A N I M A T I O N S ----------------------
 
 function getAnimParams(params)
-	local x0 = params.orig*18 + 30 -- pile from origin
+	local x0 = params.orig*24 + 2 -- pile from origin
 	if params.token == 0 then
 		local temp = params.orig + 4
-		x0 = temp*18 + 30
+		x0 = temp*24 + 2
 	end
 	local pile = piles[params.orig]
 	lastCard = #pile
 	local y0 = nil	-- last card's position in Y
 	if params.pileType == 0 then	-- From normal pile
-		y0 = lastCard*6 + 30 
+		y0 = lastCard*7 + 31 
 	elseif params.pileType == 1 then -- From Upper pile
 		y0 = lastCard*6 + 10
 	end
 	local x1 = 0
 	if params.token == 1 then 
-		x1 = params.dest*18 + 30 -- to Token Piles
+		x1 = params.dest*24 + 2 -- to Token Piles
 	elseif params.token == 2 then
-		x1 = params.dest*18 + 120 -- to End piles
+		x1 = params.dest*24 + 122 -- to End piles
 	elseif params.token == 3 then
-		x1 = 120 				 -- to Flower pile
+		x1 = 117 				 -- to Flower pile
 	elseif params.token == 0 then
-		x1 = params.dest*18 + 30 -- to Normal pile
+		x1 = params.dest*24 + 2 -- to Normal pile
 	end
-	local y1 = 10
+	local y1 = 2
 	if params.token == 0 then 
 		local pileLen = piles[params.dest]
 		local pileLen = #pileLen
-		y1 = 30 + (6*pileLen)
+		y1 = 31 + (7*pileLen)
 	end
-	local xd = (x0 - x1) / 10
-	local yd = (y0 - y1) / 10
+	local xd = (x0 - x1) / 8
+	local yd = (y0 - y1) / 8
 	return x0,y0,x1,y1,xd,yd
 end
 
@@ -515,35 +720,10 @@ function pileTokens(tokenNum)
 end
 ----------------------------------------------------------------------
 
-function getNumSprite(number)
-	local a = (number // 4) * 16
-	local b = number % 4
-	return a + b + 152
-end
-
-function printScore()
-	local c = winCount // 100
-	local d = (winCount // 10) % 10
-	local u = winCount % 10
-	if c > 0 then
-		c = getNumSprite(c)
-		spr(c,29,126,2)
-	end
-	if d > 0 then
-		d = getNumSprite(d)
-		spr(d,33,126,2)
-	end
-	u = getNumSprite(u)
-	spr(u,37,126,2)
-end
-
 function DRAW()
 	--cls(12)
 	map()
 	drawButtons()
-	spr(214,198,126,2,1,0,0,4,1)
-	spr(230,137,124,2,1,0,0,6,1)
-	spr(249,12,127,2,1,0,0,2,1)
 	printScore()
 	drawCards()
 end
@@ -570,7 +750,7 @@ function ANIMATE()
 		anim.state = 1
 		playDrawSound()
 	else -- Animation cycle
-		if anim.state < 10 then
+		if anim.state < 8 then
 			local x0 = context.x0
 			local y0 = context.y0
 			local xd = context.xd
@@ -593,14 +773,6 @@ function ANIMATE()
 			table.remove(animationQueue, 1)
 		end
 	end
-end
-
-function isPressingNewGame()
-	if cursor.x > 198 and cursor.x < 246 
-	and cursor.y > 121 and cursor.y < 130 then
-		return true 
-	end
-	return false
 end
 
 function UPDATE() 
@@ -626,13 +798,15 @@ function UPDATE()
 			end
 		elseif isPressingNewGame() then
 			createNewGame()		
+		elseif isPressingInstructions() then
+			if intro == 1 then
+				intro = 2
+			end
 		end
-	end
-	if cursor.hold == true then
+	elseif cursor.hold == true then
 		-- DROP
 		if cursor.c == false then
-			local col = (cursor.x - 30)//18
-			--card = math.floor((cursor.y - 30)/6)
+			local col = getSelCol()
 			if isTokenDropAvailable(col) then 
 				moveHandToPile(tokpiles[col])
 			elseif isEndDropAvailable(col) then
@@ -679,48 +853,6 @@ function INTRO(loadTime)
 end
 ------------------------------------------------------------------------
 
-function createNewGame()
-	piles = {{},{},{},{},{},{},{},{}}
-	tokpiles = {{},{},{}}
-	endpiles = {{},{},{}}
-	flowerPile = {}
-	victory = false
-	pileCount = 1
-	for i=1,27,1 do
-		local card = math.random(1,29)
-		while hasCardSpawned(card,flowerPile) or card == 10 or card == 20 do
-			card = math.random(1,29)
-		end
-		table.insert(flowerPile,card)
-	end
-	local i = math.random(1,27)
-	table.insert(flowerPile,i,61)
-	for i=1,4,1 do
-		i = math.random(1,27)
-		table.insert(flowerPile,i,31)
-		table.insert(flowerPile,i,41)
-		table.insert(flowerPile,i,51)
-	end
-	local col = 1
-	for i,card in ipairs(flowerPile) do
-		newAnimation(card, 1, col, 1, 0)
-		if col >= 8 then
-			col = 1
-		else
-			col = col + 1
-		end
-	end
-end
-
-function hasCardSpawned(card,deck)
-	for i,c in ipairs(deck) do
-		if c == card then
-			return true
-		end
-	end
-	return false
-end
-
 function init()
 	elapsed = time()
 	createNewGame()
@@ -729,6 +861,7 @@ end
 init()
 
 function TIC()
+	--drawInstructions()
 	if intro == 0 then
 		local time1 = time() - elapsed
 		if time1 < 1100 then
@@ -736,7 +869,7 @@ function TIC()
 		else
 			intro = 1
 		end
-	else	
+	elseif intro == 1 then
 		if  #animationQueue == 0 then 
 			if firstTime == 0 and intro == 1 then
 				music(0,0,0,true)
@@ -748,5 +881,7 @@ function TIC()
 			DRAW()
 			ANIMATE()
 		end
+	elseif intro == 2 then
+		drawInstructions()
 	end
 end
