@@ -106,7 +106,7 @@ function drawNormalPiles()
 		else 
 			for j,num in ipairs(col) do
 				x = (i * 24 + 2)
-				y = (j * 7) + 31
+				y = (j * 6) + 31
 				drawCard(x,y,num)
 			end
 		end
@@ -147,9 +147,9 @@ end
 
 function drawDrag(x,y)
 	if #drag > 0 then
-		for i,c in pairs(drag) do
+		for i,c in ipairs(drag) do
 			drawCard(x,y,c)
-			y = y + 7
+			y = y + 6
 		end
 	end
 end
@@ -208,7 +208,7 @@ end
 function drawTR()
 	local exPile = {16,25,4,23}
 	for i,card in ipairs(exPile) do
-		drawCard(130,i*7-6,card)
+		drawCard(130,i*6-5,card)
 	end
 	for i = 1,3,1 do
 		drawSpace(i*22+130,1)
@@ -220,7 +220,7 @@ end
 function drawBR()
 	local exPile = {51,51,51,51}
 	for i,card in ipairs(exPile) do
-		drawCard(125+i*7,65,card)
+		drawCard(125+i*6,65,card)
 	end
 	drawPiledCard(200,65)
 	print("    FOUR MATCHING DRAGONS\nCAN BE MOVED TO A FREE CELL\n   BY PUSHING THEIR BUTTON",
@@ -235,17 +235,13 @@ function drawInstructions()
 	drawBL()
 	drawTR()
 	drawBR()
-	if insCount <= 9 then
-		insCount = insCount + 1
-	end
 	cursor.x,cursor.y,cursor.c = mouse()
 	if isClicking() then
-		if isPressingInstructions() and intro == 2 and insCount >= 10 then
+		if isPressingInstructions() and intro == 2 then
 			intro = 1
-			insCount = 0
 		end
 		cursor.hold = true 
-	else
+	elseif cursor.c == false then
 		cursor.hold = false
 	end
 end
@@ -379,13 +375,13 @@ function getSelCardPos()
 		return nil,nil
 	end
 	-- Get ranges to check if selecting last card
-	maxy = 31 + (lastCard * 7) + 35
-	miny = 31 + (lastCard * 7)
+	maxy = 31 + (lastCard * 6) + 35
+	miny = 31 + (lastCard * 6)
 	-- check if dragging last card
 	if cursor.y > miny and cursor.y < maxy then
 		selectedCard = lastCard
 	else
-		selectedCard = (cursor.y - 31)//7
+		selectedCard = (cursor.y - 31)//6
 	end
 	return selectedCol,selectedCard
 end
@@ -425,10 +421,14 @@ end
 
 function dragStack(col,card)
 	origin.x = cursor.x - (col*24 + 2)
-	origin.y = cursor.y - (card*7 + 31)
+	origin.y = cursor.y - (card*6 + 31)
 	moveStackToHand(piles[col],card)
 	origin.isTok = 0
 	origin.col = col
+end
+
+function getCardSuit(card)
+	return (card // 10) + 1
 end
 
 function updateEndPiles()
@@ -449,7 +449,6 @@ function updateEndPiles()
 		end
 	end
 	pileCount = minim
-	--trace(pileCount)
 	-- Check for cards that are already in endpiles
 	for i,pile in ipairs(endpiles) do
 		if pile[pileCount] ~= nil and pile[pileCount] % 10 == pileCount then
@@ -459,31 +458,32 @@ function updateEndPiles()
 	-- Check for cards that are already in standard piles
 	for i,pile in ipairs(piles) do
 		pilenumber = pilenumber + 1
-		lastCard = #pile
-		if pile[lastCard] == 61 and #drag == 0 then
+		local lastCardNum = #pile
+		local lastCard = getCardNumber(pile[lastCardNum])
+		if pile[lastCardNum] == 61 and #drag == 0 then
 			newAnimation(61,i,1,0,3)
-		elseif getCardNumber(pile[lastCard]) == 1 and #drag == 0 then
-			color = (pile[lastCard] // 10) + 1
-			newAnimation(pile[lastCard],i,color,0,2)
-		elseif getCardNumber(pile[lastCard]) == pileCount and #drag == 0 then
-			color = (pile[lastCard] // 10) + 1
+		elseif lastCard == 1 or lastCard == 2 and #drag == 0 then
+			color = getCardSuit(pile[lastCardNum])
+			if #endpiles[color] >= lastCard-1 then
+				newAnimation(pile[lastCardNum],i,color,0,2)
+			end
+		elseif lastCard == pileCount and #drag == 0 then
+			color = getCardSuit(pile[lastCardNum])
 			reps[color] = pilenumber
 			repsNum = repsNum + 1
 		end
 	end
+	-- Check for auto-moving uncovered cards to endpiles
 	if repsNum == 3 then
 		for i=1,3,1 do
 			if reps[i] ~= 0 and #drag == 0 then
 				newAnimation(pileCount + ((i-1)*10),reps[i],i,0,2)
 			end
 		end
-		--if repsNum == 3 then 
-		--	pileCount = pileCount + 1
-		--end
 	end
 	-- Check if tokens are complete
 	completeToks = #tokpiles[1] + #tokpiles[2] + #tokpiles[3]
-	if pileCount > 9 and #flowerPile == 1 and completeToks == 9 then
+	if pileCount > 9 and #flowerPile == 1 and completeToks == 12 then
 		if victory == false then 
 			winCount = winCount + 1
 			victory = true
@@ -622,8 +622,8 @@ function updateButtons()
 end
 
 function isPressingInstructions()
-	if cursor.x > 140 and cursor.x < 196 
-	and cursor.y > 121 and cursor.y < 130 and cursor.c==true then
+	if cursor.x > 128 and cursor.x < 192
+	and cursor.y > 121 and cursor.y < 132 then
 		return true 
 	end
 	return false
@@ -631,7 +631,7 @@ end
 
 function isPressingNewGame()
 	if cursor.x > 198 and cursor.x < 246 
-	and cursor.y > 121 and cursor.y < 130 then
+	and cursor.y > 121 and cursor.y < 132 then
 		return true 
 	end
 	return false
@@ -649,7 +649,7 @@ function getAnimParams(params)
 	lastCard = #pile
 	local y0 = nil	-- last card's position in Y
 	if params.pileType == 0 then	-- From normal pile
-		y0 = lastCard*7 + 31 
+		y0 = lastCard*6 + 31 
 	elseif params.pileType == 1 then -- From Upper pile
 		y0 = lastCard*6 + 10
 	end
@@ -667,7 +667,7 @@ function getAnimParams(params)
 	if params.token == 0 then 
 		local pileLen = piles[params.dest]
 		local pileLen = #pileLen
-		y1 = 31 + (7*pileLen)
+		y1 = 31 + (6*pileLen)
 	end
 	local xd = (x0 - x1) / 8
 	local yd = (y0 - y1) / 8
@@ -782,7 +782,6 @@ function UPDATE()
 	-- DRAG / Click
 	cursor.x,cursor.y,cursor.c = mouse()
 	if isClicking() then
-		cursor.hold = true
 		local col,card = getSelCardPos()
 		if isDraggingTokPiles(col) then
 			dragCardFromTokPiles(col)
@@ -803,6 +802,7 @@ function UPDATE()
 				intro = 2
 			end
 		end
+		cursor.hold = true
 	elseif cursor.hold == true then
 		-- DROP
 		if cursor.c == false then
@@ -872,7 +872,7 @@ function TIC()
 	elseif intro == 1 then
 		if  #animationQueue == 0 then 
 			if firstTime == 0 and intro == 1 then
-				music(0,0,0,true)
+				--music(0,0,0,true)
 				firstTime = 1
 			end
 			UPDATE()
