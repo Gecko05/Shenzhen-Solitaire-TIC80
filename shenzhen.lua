@@ -462,7 +462,7 @@ function updateEndPiles()
 		local lastCard = getCardNumber(pile[lastCardNum])
 		if pile[lastCardNum] == 61 and #drag == 0 then
 			newAnimation(61,i,1,0,3)
-		elseif lastCard == 1 or lastCard == 2 and #drag == 0 then
+		elseif (lastCard == 1 or lastCard == 2) and #drag == 0 then
 			color = getCardSuit(pile[lastCardNum])
 			if #endpiles[color] >= lastCard-1 then
 				newAnimation(pile[lastCardNum],i,color,0,2)
