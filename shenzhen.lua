@@ -22,7 +22,7 @@ local loadPiles = {{4,3,2,1,41},
         {26,41,31},
         {31,31,61}}
 
-local endpiles = {		{},
+local endpiles = {	{},
 			        {},
 			        {}
 			        }
@@ -51,6 +51,9 @@ local elapsed = 0
 local intro = 0
 local firstTime = 0
 local insCount = 0
+local debugFlag = 1
+local victoryAnim = 0
+local vicy = {0,0,0}
 
 ------------------------------ D R A W I N G -----------------------------
 
@@ -127,7 +130,9 @@ function drawEndPiles()
 	for i,col in ipairs(endpiles) do
 		if #col == 0 then
 			drawTokSpace((i*24) + 122, 0)
-		else 
+		elseif #col == 9 then
+			drawPiledCard((i*24) + 122, 0)
+		else
 			for j,num in ipairs(col) do
 				x = (i * 24) + 122
 				drawCard(x,0,num)
@@ -718,6 +723,33 @@ function pileTokens(tokenNum)
 		newAnimation(tokenCard,pile,pilePos,0,1)
 	end
 end
+
+function playVictoryAnimation()
+	map()
+	endpiles = {{},{},{}}
+	tokpiles = {{},{},{}}
+	drawCards()
+	drawButtons()
+	printScore()
+	if victoryAnim < 80 then
+		local tokx = 2
+		for i=1,3,1 do
+			framecol =
+			vicy[1] = victoryAnim * 2
+			if victoryAnim > 8 then
+				drawPiledCard(tokx+24*i, vicy[1] - 16)
+			end
+			if victoryAnim > 4 then
+				drawPiledCard(tokx+24*i, vicy[1] - 8)
+			end
+			drawPiledCard(tokx+24*i, vicy[1])
+		end 
+	else
+		victory = false
+		victoryAnim = 0
+	end
+	victoryAnim = victoryAnim + 1
+end
 ----------------------------------------------------------------------
 
 function DRAW()
@@ -796,7 +828,8 @@ function UPDATE()
 				pileTokens(btnNum)
 			end
 		elseif isPressingNewGame() then
-			createNewGame()		
+			--createNewGame()	
+			victory = true
 		elseif isPressingInstructions() then
 			if intro == 1 then
 				intro = 2
@@ -855,7 +888,11 @@ end
 
 function init()
 	elapsed = time()
-	createNewGame()
+	if debugFlag == 1 then
+		piles = loadPiles
+	else
+		createNewGame()
+	end
 end
 
 init()
@@ -870,14 +907,16 @@ function TIC()
 			intro = 1
 		end
 	elseif intro == 1 then
-		if  #animationQueue == 0 then 
+		if victory == true then
+			playVictoryAnimation()
+		elseif  #animationQueue == 0 then 
 			if firstTime == 0 and intro == 1 then
 				music(0,0,0,true)
 				firstTime = 1
 			end
 			UPDATE()
 			DRAW()
-		else
+		else 
 			DRAW()
 			ANIMATE()
 		end
