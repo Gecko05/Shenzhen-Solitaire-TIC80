@@ -523,8 +523,8 @@ function createNewGame()
 		table.insert(flowerPile,i,51)
 	end
 	local col = 1
-	for i,card in ipairs(flowerPile) do
-		newAnimation(card, 1, col, 1, 0)
+	for i=#flowerPile,1,-1 do
+		newAnimation(flowerPile[i], 1, col, 1, 0)
 		if col >= 8 then
 			col = 1
 		else
@@ -872,7 +872,7 @@ function TIC()
 	elseif intro == 1 then
 		if  #animationQueue == 0 then 
 			if firstTime == 0 and intro == 1 then
-				--music(0,0,0,true)
+				music(0,0,0,true)
 				firstTime = 1
 			end
 			UPDATE()
