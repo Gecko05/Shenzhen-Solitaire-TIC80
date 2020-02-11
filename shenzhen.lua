@@ -22,7 +22,7 @@ local loadPiles = {{4,3,2,1,41},
         {26,41,31},
         {31,31,61}}
 
-local endpiles = {	{},
+local endpiles = {		{},
 			        {},
 			        {}
 			        }
@@ -51,9 +51,17 @@ local elapsed = 0
 local intro = 0
 local firstTime = 0
 local insCount = 0
-local debugFlag = 1
-local victoryAnim = 0
-local vicy = {0,0,0}
+-- Timing
+local elapsedTime = 0
+local timer1
+
+function resetTimer()
+	elapsedTime = time()
+end
+
+function getElapsedTime()
+	return time() - elapsedTime
+end
 
 ------------------------------ D R A W I N G -----------------------------
 
@@ -130,9 +138,7 @@ function drawEndPiles()
 	for i,col in ipairs(endpiles) do
 		if #col == 0 then
 			drawTokSpace((i*24) + 122, 0)
-		elseif #col == 9 then
-			drawPiledCard((i*24) + 122, 0)
-		else
+		else 
 			for j,num in ipairs(col) do
 				x = (i * 24) + 122
 				drawCard(x,0,num)
@@ -724,33 +730,30 @@ function pileTokens(tokenNum)
 	end
 end
 
-function playVictoryAnimation()
-	map()
-	endpiles = {{},{},{}}
-	tokpiles = {{},{},{}}
-	drawCards()
-	drawButtons()
-	printScore()
-	if victoryAnim < 80 then
-		local tokx = 2
-		for i=1,3,1 do
-			framecol =
-			vicy[1] = victoryAnim * 2
-			if victoryAnim > 8 then
-				drawPiledCard(tokx+24*i, vicy[1] - 16)
+local trackId = 1
+local trackN = 2
+local trackLen = {24000,3000}
+local trackRep = {3,2}
+local trackCount = 0
+local timerM
+
+function playMusic()
+	timerM = getElapsedTime()
+	if timerM > trackLen[trackId] then
+		resetTimer()
+		if trackCount > trackRep[trackId] then
+			trackId = trackId + 1
+			if trackId > trackN then
+				trackId = 1
 			end
-			if victoryAnim > 4 then
-				drawPiledCard(tokx+24*i, vicy[1] - 8)
-			end
-			drawPiledCard(tokx+24*i, vicy[1])
-		end 
-	else
-		victory = false
-		victoryAnim = 0
+			trackCount = 0
+		end
+		music(trackId-1,0,0,false)
+		trackCount = trackCount + 1
 	end
-	victoryAnim = victoryAnim + 1
 end
-----------------------------------------------------------------------
+
+-------------------------------- M U S I C ----------------------------
 
 function DRAW()
 	--cls(12)
@@ -807,6 +810,8 @@ function ANIMATE()
 	end
 end
 
+-------------------------------- C O R E ------------------------------
+
 function UPDATE() 
 	-- Check for unblocked tokens
 	updateButtons()
@@ -828,8 +833,7 @@ function UPDATE()
 				pileTokens(btnNum)
 			end
 		elseif isPressingNewGame() then
-			--createNewGame()	
-			victory = true
+			createNewGame()		
 		elseif isPressingInstructions() then
 			if intro == 1 then
 				intro = 2
@@ -888,39 +892,35 @@ end
 
 function init()
 	elapsed = time()
-	if debugFlag == 1 then
-		piles = loadPiles
-	else
-		createNewGame()
-	end
+	createNewGame()
 end
 
 init()
-
 function TIC()
 	--drawInstructions()
 	if intro == 0 then
-		local time1 = time() - elapsed
-		if time1 < 1100 then
-			INTRO(time1)
+		timer1 = time() - elapsed
+		if timer1 < 1100 then
+			INTRO(timer1)
+			resetTimer()
 		else
 			intro = 1
 		end
 	elseif intro == 1 then
-		if victory == true then
-			playVictoryAnimation()
-		elseif  #animationQueue == 0 then 
+		if  #animationQueue == 0 then 
 			if firstTime == 0 and intro == 1 then
-				music(0,0,0,true)
+				music(0,0,0,false)
 				firstTime = 1
+				resetTimer()
 			end
 			UPDATE()
 			DRAW()
-		else 
+		else
 			DRAW()
 			ANIMATE()
 		end
 	elseif intro == 2 then
 		drawInstructions()
 	end
+	playMusic()
 end
