@@ -730,11 +730,13 @@ function pileTokens(tokenNum)
 	end
 end
 
-local trackId = 1
-local trackN = 2
-local trackLen = {24000,3000}
-local trackRep = {3,2}
-local trackCount = 0
+-------------------------------- M U S I C ----------------------------
+
+local trackId = 1 --current track 
+local trackN = 4 --number of tracks
+local trackLen = {24000,12000,5500,12000} --duration in miliseconds
+local trackRep = {1,1,1,4} --repetitions per track
+local trackCount = 1
 local timerM
 
 function playMusic()
@@ -746,14 +748,14 @@ function playMusic()
 			if trackId > trackN then
 				trackId = 1
 			end
-			trackCount = 0
+			trackCount = 1
 		end
 		music(trackId-1,0,0,false)
 		trackCount = trackCount + 1
 	end
 end
 
--------------------------------- M U S I C ----------------------------
+------------------------------- C O R E ------------------------------
 
 function DRAW()
 	--cls(12)
