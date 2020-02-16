@@ -51,6 +51,7 @@ local elapsed = 0
 local intro = 0
 local firstTime = 0
 local insCount = 0
+local debugFlag = 0
 -- Timing
 local elapsedTime = 0
 local timer1
@@ -734,8 +735,8 @@ end
 
 local trackId = 1 --current track 
 local trackN = 4 --number of tracks
-local trackLen = {24000,12000,5500,12000} --duration in miliseconds
-local trackRep = {1,1,1,4} --repetitions per track
+local trackLen = {25600,12800,5600,10400} --duration in miliseconds
+local trackRep = {1,4,4,4} --repetitions per track
 local trackCount = 1
 local timerM
 
@@ -750,7 +751,7 @@ function playMusic()
 			end
 			trackCount = 1
 		end
-		music(trackId-1,0,0,false)
+		music(trackId-1,-1,-1,false)
 		trackCount = trackCount + 1
 	end
 end
@@ -911,7 +912,7 @@ function TIC()
 	elseif intro == 1 then
 		if  #animationQueue == 0 then 
 			if firstTime == 0 and intro == 1 then
-				music(0,0,0,false)
+				music(0,-1,-1,false)
 				firstTime = 1
 				resetTimer()
 			end
